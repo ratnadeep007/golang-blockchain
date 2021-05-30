@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dgraph-io/badger/v3"
+	"log"
 	"os"
 	"runtime"
 )
@@ -36,6 +37,13 @@ func DBexists() bool {
 
 func (chain *BlockChain) AddBlock(transactions []*Transaction) {
 	var lastHash []byte
+
+	for _, tx := range transactions {
+		if chain.VerifyTransaction(tx) != true {
+			log.Panic("Invalid transaction")
+		}
+	}
+
 	err := chain.Database.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte("lh"))
 		Handle(err)
@@ -177,7 +185,7 @@ func (chain *BlockChain) FindUnspentTransactions(pubKeyHash []byte) []Transactio
 				for _, in := range tx.Inputs {
 					if in.UsesKey(pubKeyHash) {
 						inTxID := hex.EncodeToString(in.ID)
-						spentTXOs[inTxID] = append(spentTXOs[inTxID])
+						spentTXOs[inTxID] = append(spentTXOs[inTxID], in.Out)
 					}
 				}
 			}
@@ -205,7 +213,7 @@ func (chain *BlockChain) FindUTXO(pubKeyHash []byte) []TxOutput {
 }
 
 func (chain *BlockChain) FindSpendableOutputs(pubKeyHash []byte, amount int) (int, map[string][]int) {
-	unspendOuts := make(map[string][]int)
+	unspentOuts := make(map[string][]int)
 	unspentTxs := chain.FindUnspentTransactions(pubKeyHash)
 	accumulated := 0
 
@@ -216,7 +224,7 @@ Work:
 		for outIdx, out := range tx.Outputs {
 			if out.IsLockedWithKey(pubKeyHash) && accumulated < amount {
 				accumulated += out.Value
-				unspendOuts[txID] = append(unspendOuts[txID], outIdx)
+				unspentOuts[txID] = append(unspentOuts[txID], outIdx)
 
 				if accumulated >= amount {
 					break Work
@@ -224,7 +232,7 @@ Work:
 			}
 		}
 	}
-	return accumulated, unspendOuts
+	return accumulated, unspentOuts
 }
 
 func (bc *BlockChain) FindTransaction(ID []byte) (Transaction, error) {
