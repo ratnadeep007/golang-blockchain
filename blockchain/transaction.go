@@ -99,7 +99,7 @@ func NewTransaction(from, to string, amount int, UTXO *UTXOSet) *Transaction {
 	outputs = append(outputs, *NewTXOutput(amount, to))
 
 	if acc > amount {
-		outputs = append(outputs, *NewTXOutput(acc-amount, to))
+		outputs = append(outputs, *NewTXOutput(acc-amount, from))
 	}
 
 	tx := Transaction{nil, inputs, outputs}

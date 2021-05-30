@@ -96,6 +96,10 @@ func (cli *CommandLine) createBlockChain(address string) {
 	if err != nil {
 		return
 	}
+
+	UTXOSet := blockchain.UTXOSet{BlockChain: chain}
+	UTXOSet.Reindex()
+
 	fmt.Println("Finished!")
 }
 
@@ -111,7 +115,7 @@ func (cli *CommandLine) getBalance(address string) {
 	}(chain.Database)
 
 	balance := 0
-	pubKeyHash := wallet.Base58Encode([]byte(address))
+	pubKeyHash := wallet.Base58Decode([]byte(address))
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
 	UTXOs := UTXOSet.FindUnspentTransactions(pubKeyHash)
 
